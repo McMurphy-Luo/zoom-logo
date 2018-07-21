@@ -23,7 +23,9 @@
     <ClCompile Include="src\MainWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Define.h" />
     <ClInclude Include="src\MainWindow.h" />
+    <ClInclude Include="src\Utf8String.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -77,20 +79,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output</OutDir>
-    <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj</IntDir>
+    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output</OutDir>
-    <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj</IntDir>
+    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output</OutDir>
-    <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj</IntDir>
+    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output</OutDir>
-    <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj</IntDir>
+    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
