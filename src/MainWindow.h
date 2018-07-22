@@ -9,32 +9,38 @@
 
 #include "./Define.h"
 #include <Windows.h>
-#include "./Utf8String.h"
 #include <boost/signals2.hpp>
+#include "./Utf8String.h"
 
 NAMESPACE_BEGIN
 
 const char* const kMainWindowClass = u8"MainWindow.zoom-logo.zoom.us";
+
+typedef LRESULT MessageHandler(UINT msg, WPARAM w_param, LPARAM l_param);
 
 class MainWindow
 {
 public:
   MainWindow(const Utf8String& window_name, HINSTANCE module_handle);
 
-  inline void Show(int show_flags);
+  void Show(int show_flags);
 
   inline HWND WindowHandler() const;
 
+  inline RECT ClientRectangle() const;
+
   inline MSG LastMessage() const;
-  
-protected:
-  LRESULT OnPaint(UINT uMsg, WPARAM wParam, LPARAM lParam);
-  LRESULT OnSize(UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+  LRESULT Trigger(UINT msg, WPARAM w_param, LPARAM l_param);
+
+  boost::signals2::connection Connect(UINT msg, std::function<MessageHandler> handler);
 
 private:
   HWND window_handler_;
   MSG last_message_;
-  boost::signals2::signal<LRESULT(UINT uMsg, WPARAM wParam, LPARAM lParam)> on_event_;
+  boost::signals2::signal<MessageHandler> on_paint_;
+  boost::signals2::signal<MessageHandler> on_size_;
+  boost::signals2::signal<MessageHandler> on_other_;
 };
 
 NAMESPACE_END
