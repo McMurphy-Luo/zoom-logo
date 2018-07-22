@@ -10,6 +10,7 @@
 #include "./Define.h"
 #include <Windows.h>
 #include "./Utf8String.h"
+#include <boost/signals2.hpp>
 
 NAMESPACE_BEGIN
 
@@ -33,6 +34,7 @@ protected:
 private:
   HWND window_handler_;
   MSG last_message_;
+  boost::signals2::signal<LRESULT(UINT uMsg, WPARAM wParam, LPARAM lParam)> on_event_;
 };
 
 NAMESPACE_END
