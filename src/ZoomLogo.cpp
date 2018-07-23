@@ -4,6 +4,28 @@
 #include <functional>
 #include "./MainWindow.h"
 
+namespace
+{
+  const double_t kCircleRadius = 0.5;
+  const double_t kCircleBorderWidth = 8 / 240;
+  const double_t kRectangleLeft = 48 / 240;
+  const double_t kRectangleWidth = 104 / 240;
+  const double_t kRectangleTop = 80 / 240;
+  const double_t kRectangleHeight = 80 / 240;
+  const double_t kRectangleLeftTopBorderRadius = 2 / 240;
+  const double_t kRectangleRightBottomRadius = 2 / 240;
+  const double_t kRectangleRightTopRadius = 11 / 240;
+  const double_t kRectangleLeftBottomRadius = 11 / 240;
+  const double_t kTrapezoidLeftTopLeft = 156 / 240;
+  const double_t kTrapezoidLeftTopTop = 103 / 240;
+  const double_t kTrapezoidLeftBottomLeft = 156 / 240;
+  const double_t kTrapezoidLeftBottomBottom = 136 / 240;
+  const double_t kTrapezoidRightTopRight = 191 / 240;
+  const double_t kTrapezoidRightTopTop = 80 / 240;
+  const double_t kTrapezoidRightBottomRight = 191 / 240;
+  const double_t kTrapezoidRightBottomBottom = 159 / 240;
+}
+
 NAMESPACE_BEGIN
 
 ZoomLogo::ZoomLogo(MainWindow* parent_window)
@@ -18,6 +40,11 @@ ZoomLogo::ZoomLogo(MainWindow* parent_window)
   parent_window_->Connect(WM_PAINT, std::bind(std::mem_fn(&ZoomLogo::GdiPlusPaint), this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
+ZoomLogo::~ZoomLogo()
+{
+
+}
+
 void ZoomLogo::D2DRender()
 {
   OutputDebugString(_T("D2DRender is called;"));
@@ -26,6 +53,7 @@ void ZoomLogo::D2DRender()
 LRESULT ZoomLogo::D2DPaint(UINT msg, WPARAM w_param, LPARAM l_param)
 {
   OutputDebugString(_T("D2DPaint is called;"));
+  return 0;
 }
 
 void ZoomLogo::GdiPlusRender()
@@ -35,9 +63,12 @@ void ZoomLogo::GdiPlusRender()
 
 LRESULT ZoomLogo::GdiPlusPaint(UINT msg, WPARAM w_param, LPARAM l_param)
 {
-  BeginPaint(parent_window_->WindowHandler(), nullptr);
+  PAINTSTRUCT paint_struct;
+  BeginPaint(parent_window_->WindowHandler(), &paint_struct);
   OutputDebugString(_T("GdiPlusPaint is called;"));
-  BOOL succeeded = EndPaint(parent_window_->WindowHandler(), nullptr);
+  BOOL succeeded = EndPaint(parent_window_->WindowHandler(), &paint_struct);
+  assert(succeeded);
+  return 0;
 }
 
 

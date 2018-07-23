@@ -10,6 +10,7 @@
 #include "./Define.h"
 #include <atlbase.h>
 #include <d2d1.h>
+#include <boost/signals2.hpp>
 #include <boost/noncopyable.hpp>
 
 NAMESPACE_BEGIN
@@ -19,7 +20,7 @@ class MainWindow; // forward declaration
 class ZoomLogo : boost::noncopyable
 {
 public:
-  ZoomLogo(MainWindow* the_main_window);
+  explicit ZoomLogo(MainWindow* the_main_window);
 
   ~ZoomLogo();
 

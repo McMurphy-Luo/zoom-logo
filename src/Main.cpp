@@ -8,6 +8,8 @@
 
 using zoom_logo::MainWindow;
 using zoom_logo::ZoomLogo;
+using Gdiplus::GdiplusStartup;
+using Gdiplus::GdiplusShutdown;
 
 int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR command_line, int show) {
   CoInitialize(nullptr);

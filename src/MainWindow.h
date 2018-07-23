@@ -25,7 +25,7 @@ public:
 
   void Show(int show_flags);
 
-  inline HWND WindowHandler() const;
+  HWND WindowHandler() const;
 
   inline RECT ClientRectangle() const;
 
