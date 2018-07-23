@@ -10,11 +10,17 @@ using zoom_logo::MainWindow;
 using zoom_logo::ZoomLogo;
 using Gdiplus::GdiplusStartup;
 using Gdiplus::GdiplusShutdown;
+using Gdiplus::GdiplusStartupInput;
+using Gdiplus::GdiplusStartupOutput;
+using Gdiplus::Status;
 
 int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR command_line, int show) {
   CoInitialize(nullptr);
   ULONG_PTR gdi_plus_token;
-  GdiplusStartup(&gdi_plus_token, nullptr, nullptr);
+  Status gdiplus_initialize_status;
+  GdiplusStartupInput gdip_startup_input;
+  gdiplus_initialize_status = GdiplusStartup(&gdi_plus_token, &gdip_startup_input, nullptr);
+  assert(gdiplus_initialize_status == Status::Ok);
 
   MainWindow* the_main_window = new MainWindow("Hello World", instance);
   ZoomLogo* zoom_logo = new ZoomLogo(the_main_window);

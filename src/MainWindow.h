@@ -27,9 +27,9 @@ public:
 
   HWND WindowHandler() const;
 
-  inline RECT ClientRectangle() const;
+  RECT ClientRectangle() const;
 
-  inline MSG LastMessage() const;
+  MSG LastMessage() const;
 
   LRESULT Trigger(UINT msg, WPARAM w_param, LPARAM l_param);
 
