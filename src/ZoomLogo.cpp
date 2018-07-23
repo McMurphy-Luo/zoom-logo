@@ -2,7 +2,10 @@
 #include <cassert>
 #include <chrono>
 #include <functional>
+#include <gdiplus.h>
 #include "./MainWindow.h"
+
+using Gdiplus::Graphics;
 
 namespace
 {
@@ -59,9 +62,13 @@ LRESULT ZoomLogo::D2DPaint(UINT msg, WPARAM w_param, LPARAM l_param)
   return 0;
 }
 
-void ZoomLogo::GdiPlusRender()
+void ZoomLogo::GdiPlusRender(HDC dc)
 {
   OutputDebugString(_T("GdiPlusRender is called;"));
+  
+  Graphics frame(dc);
+  
+
 }
 
 LRESULT ZoomLogo::GdiPlusPaint(UINT msg, WPARAM w_param, LPARAM l_param)

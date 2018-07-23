@@ -28,7 +28,7 @@ public:
 
   LRESULT D2DPaint(UINT msg, WPARAM w_param, LPARAM l_param);
 
-  void GdiPlusRender();
+  void GdiPlusRender(HDC dc);
 
   LRESULT GdiPlusPaint(UINT msg, WPARAM w_param, LPARAM l_param);
 
