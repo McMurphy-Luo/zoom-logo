@@ -24,6 +24,9 @@ namespace
   const double_t kTrapezoidRightTopTop = 80 / 240;
   const double_t kTrapezoidRightBottomRight = 191 / 240;
   const double_t kTrapezoidRightBottomBottom = 159 / 240;
+  const std::int_least32_t kPrimaryColorRGBA = 0xffffffff;
+  const std::int_least32_t kRectangleTopColorRGBA = 0x2cbdffff;
+  const std::int_least32_t kRectangleBottomColorRGBA = 0x2c63ffff;
 }
 
 NAMESPACE_BEGIN
