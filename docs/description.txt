@@ -1,0 +1,10 @@
+circle radius = 0.5
+circle border width = 8 / 240
+rectangle left = 48 / 240
+rectangle width = 104 / 240
+rectangle top = 80 / 240
+rectangle height = 80 / 240
+rectangle left top border radius = 2
+rectangle right bottom radius = 2
+rectangle right top radius = 
+rectangle left bottom radius = 

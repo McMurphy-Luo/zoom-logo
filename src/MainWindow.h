@@ -18,7 +18,7 @@ const char* const kMainWindowClass = u8"MainWindow.zoom-logo.zoom.us";
 
 typedef LRESULT MessageHandler(UINT msg, WPARAM w_param, LPARAM l_param);
 
-class MainWindow
+class MainWindow : boost::noncopyable
 {
 public:
   MainWindow(const Utf8String& window_name, HINSTANCE module_handle);

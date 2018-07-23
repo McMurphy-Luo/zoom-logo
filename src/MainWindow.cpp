@@ -1,8 +1,14 @@
 #include "./MainWindow.h"
 #include <cassert>
 #include <tchar.h>
+#include <iostream>
 
 using namespace zoom_logo;
+using boost::optional;
+using std::wstring;
+using std::function;
+using boost::signals2::signal;
+using boost::signals2::connection;
 
 namespace
 {
@@ -21,22 +27,10 @@ namespace
         PostQuitMessage(0);
         return 0;
       }
-      case WM_SIZE:
-      {
-        MainWindow* theWindow = reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handler, GWLP_USERDATA));
-        return reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handler, GWLP_USERDATA))->Trigger(msg, w_param, l_param);
-      }
-      case WM_LBUTTONDOWN:
-      {
-        MainWindow* theWindow = reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handler, GWLP_USERDATA));
-        return reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handler, GWLP_USERDATA))->Trigger(msg, w_param, l_param);
-      }
-      case WM_PAINT:
-      {
-        MainWindow* theWindow = reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handler, GWLP_USERDATA));
-        return reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handler, GWLP_USERDATA))->Trigger(msg, w_param, l_param);
-      }
     }
+    MainWindow* theWindow = reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handler, GWLP_USERDATA));
+    if (theWindow)
+      return theWindow->Trigger(msg, w_param, l_param);
     return DefWindowProc(window_handler, msg, w_param, l_param);
   }
 
@@ -62,7 +56,7 @@ namespace
     static ATOM register_result;
     if (!is_class_registered) {
       WNDCLASSEX main_window_class = MainWindowClass(module_handle);
-      std::wstring class_name = Utf8StringToWString(kMainWindowClass);
+      wstring class_name = Utf8StringToWString(kMainWindowClass);
       main_window_class.lpszClassName = class_name.c_str();
       register_result = RegisterClassEx(&main_window_class);
       assert(register_result);
@@ -77,7 +71,7 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
   , last_message_()
 {
   RegisterMainWindow(module_handle);
-  std::wstring class_name = Utf8StringToWString(kMainWindowClass);
+  wstring class_name = Utf8StringToWString(kMainWindowClass);
   window_handler_ = CreateWindowEx(
     WS_EX_OVERLAPPEDWINDOW,
     class_name.c_str(),
@@ -102,7 +96,7 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
 void MainWindow::Show(int show_flags)
 {
   assert(IsWindow(window_handler_));
-  ShowWindow(window_handler_, SW_SHOW);
+  ShowWindow(window_handler_, show_flags);
 }
 
 HWND MainWindow::WindowHandler() const
@@ -120,7 +114,21 @@ LRESULT MainWindow::Trigger(UINT msg, WPARAM w_param, LPARAM l_param)
   switch (msg) {
     case WM_PAINT:
     {
-
+      optional<LRESULT> result = on_paint_(msg, w_param, l_param);
+      if (result)
+        return *result;
+    }
+    case WM_SIZE:
+    {
+      optional<LRESULT> result = on_size_(msg, w_param, l_param);
+      if (result)
+        return *result;
+    }
+    default:
+    {
+      optional<LRESULT> result = on_other_(msg, w_param, l_param);
+      if (result)
+        return *result;
     }
   }
   return DefWindowProc(window_handler_, msg, w_param, l_param);
@@ -134,7 +142,7 @@ RECT MainWindow::ClientRectangle() const
   return result;
 }
 
-boost::signals2::connection MainWindow::Connect(UINT msg, std::function<MessageHandler> handler)
+connection MainWindow::Connect(UINT msg, function<MessageHandler> handler)
 {
   switch (msg) {
   case WM_PAINT:

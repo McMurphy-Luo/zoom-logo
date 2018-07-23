@@ -17,7 +17,7 @@ wstring Utf8StringToWString(const Utf8String& source)
   return result;
 }
 
-Utf8String WStringToUtf8String(const std::wstring& source)
+Utf8String WStringToUtf8String(const wstring& source)
 {
   int size_required = WideCharToMultiByte(CP_UTF8, 0, source.c_str(), -1, nullptr, 0, nullptr, nullptr);
   char* buffer = new char[size_required];
