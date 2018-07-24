@@ -26,8 +26,8 @@ namespace
   const double_t kRectangleHeight = 80.0 / 240.0;
   const double_t kRectangleLeftTopBorderRadius = 2.0 / 240.0;
   const double_t kRectangleRightBottomRadius = 2.0 / 240.0;
-  const double_t kRectangleRightTopRadius = 11.0 / 240.0;
-  const double_t kRectangleLeftBottomRadius = 11.0 / 240.0;
+  const double_t kRectangleRightTopRadius = 22.0 / 240.0;
+  const double_t kRectangleLeftBottomRadius = 22.0 / 240.0;
   const double_t kTrapezoidLeftTopLeft = 156.0 / 240.0;
   const double_t kTrapezoidLeftTopTop = 103.0 / 240.0;
   const double_t kTrapezoidLeftBottomLeft = 156.0 / 240.0;
@@ -134,26 +134,91 @@ void ZoomLogo::GdiPlusRender(HDC dc)
 
   int rectangle_line_left_left = out_ellipse_bounding_rect.GetLeft() + kRectangleLeft * circle_diameter;
   int rectangle_line_left_top = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter + kRectangleLeftTopBorderRadius * circle_diameter;
-  int rectangle_line_left_bottom = rectangle_line_left_top + kRectangleHeight * circle_diameter - ;
-
+  int rectangle_line_left_bottom = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter + kRectangleHeight * circle_diameter - kRectangleLeftBottomRadius * circle_diameter;
   
 
+  int rectangle_line_top_left = rectangle_line_left_left + kRectangleLeftTopBorderRadius * circle_diameter;
+  int rectangle_line_top_top = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter;
+  int rectangle_line_top_right = rectangle_line_left_left + kRectangleWidth * circle_diameter - kRectangleRightTopRadius * circle_diameter;
   
-  int rectangle_line_right_left = rectangle_line_left_left + kRectangleWidth * circle_diameter;
-  int rectangle_line_right_top = rectangle_line_left_top;
-  int rectangle_line_right_bottom = rectangle_line_left_bottom;
+  int rectangle_line_right_left = rectangle_line_left_left + kRectangleWidth * circle_diameter ;
+  int rectangle_line_right_top = rectangle_line_top_top + kRectangleRightTopRadius * circle_diameter;
+  int rectangle_line_right_bottom = rectangle_line_top_top + kRectangleHeight * circle_diameter - kRectangleRightBottomRadius * circle_diameter;
 
-  result = frame.FillRectangle(&out_circle_brush, Rect(rectangle_line_left_left, rectangle_line_left_top, rectangle_line_right_left - rectangle_line_left_left, rectangle_line_right_bottom - rectangle_line_right_top));
+  int rectangle_line_bottom_left = rectangle_line_left_left + kRectangleLeftBottomRadius * circle_diameter;
+  int rectangle_line_bottom_bottom = rectangle_line_top_top + kRectangleHeight * circle_diameter;
+  int rectangle_line_bottom_right = rectangle_line_left_left + kRectangleWidth * circle_diameter - kRectangleRightBottomRadius * circle_diameter;
 
   GraphicsPath zoom_rect;
   
+  zoom_rect.StartFigure();
+
   zoom_rect.AddLine(
+    rectangle_line_left_left,
+    rectangle_line_left_bottom,
+    rectangle_line_left_left,
+    rectangle_line_left_top
+  );
+  zoom_rect.AddBezier(
+    rectangle_line_left_left, rectangle_line_left_top,
+    rectangle_line_left_left, rectangle_line_top_top,
+    rectangle_line_left_left, rectangle_line_top_top,
+    rectangle_line_top_left, rectangle_line_top_top
+  );
+  zoom_rect.AddLine(
+    rectangle_line_top_left,
+    rectangle_line_top_top,
+    rectangle_line_top_right,
+    rectangle_line_top_top
+  );
+  zoom_rect.AddArc(
+    Rect(rectangle_line_right_left - kRectangleRightTopRadius * circle_diameter * 2, rectangle_line_top_top, kRectangleRightTopRadius * circle_diameter * 2, kRectangleRightTopRadius * circle_diameter * 2),
+    270,
+    90
+  );
+  /*
+  zoom_rect.AddBezier(
+    rectangle_line_top_right, rectangle_line_top_top,
+    rectangle_line_right_left, rectangle_line_top_top,
+    rectangle_line_right_left, rectangle_line_top_top,
+    rectangle_line_right_left, rectangle_line_right_top
+  );
+  */
+  zoom_rect.AddLine(
+    rectangle_line_right_left,
+    rectangle_line_right_top,
+    rectangle_line_right_left,
+    rectangle_line_right_bottom
+  );
+  /*
+  zoom_rect.AddBezier(
+    rectangle_line_right_left, rectangle_line_bottom_bottom,
+    rectangle_line_right_left, rectangle_line_bottom_bottom,
+    rectangle_line_right_left, rectangle_line_bottom_bottom,
+    rectangle_line_bottom_right, rectangle_line_bottom_bottom
+  );
+  */
+  zoom_rect.AddLine(
+    rectangle_line_bottom_right,
+    rectangle_line_bottom_bottom,
+    rectangle_line_bottom_left,
+    rectangle_line_bottom_bottom
+  );
+  /*
+  zoom_rect.AddBezier(
+    rectangle_line_bottom_left, rectangle_line_bottom_bottom,
+    rectangle_line_left_left, rectangle_line_bottom_bottom,
+    rectangle_line_left_left, rectangle_line_bottom_bottom,
+    rectangle_line_left_left, rectangle_line_left_bottom
+  );
+  */
 
 
+  zoom_rect.CloseFigure();
 
-  )
+  Pen primary_color_pen(kPrimaryColorRGBA);
 
-
+  frame.FillPath(&out_circle_brush, &zoom_rect);
   assert(result == Status::Ok);
 
 
