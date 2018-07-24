@@ -12,6 +12,7 @@ using Gdiplus::Rect;
 using Gdiplus::Status;
 using Gdiplus::Pen;
 using Gdiplus::LinearGradientBrush;
+using Gdiplus::GraphicsPath;
 using std::double_t;
 using std::int_least32_t;
 
@@ -50,7 +51,6 @@ namespace
     );
   }
 }
-
 
 NAMESPACE_BEGIN
 
@@ -102,17 +102,64 @@ void ZoomLogo::GdiPlusRender(HDC dc)
   SolidBrush out_circle_brush(IntColorToGdiColor(kPrimaryColorRGBA));
   result = out_circle_brush.GetLastStatus();
   assert(result == Status::Ok);
-
   int circle_diameter = min(client_width, client_height);
   int circle_radius = circle_diameter * kCircleRadius;
-  frame.FillEllipse(&out_circle_brush, Rect(
+  int circle_border_width = circle_radius * kCircleBorderWidth;
+  Rect out_ellipse_bounding_rect(
     client_width > client_height ? (client_width / 2 - circle_radius) : 0,
     client_width > client_height ? 0 : (client_height / 2 - circle_radius),
     circle_radius * 2,
     circle_radius * 2
-  ));  
+  );
+  result = frame.FillEllipse(&out_circle_brush, out_ellipse_bounding_rect);
+  assert(result == Status::Ok);
+
+  Rect inner_ellise_bounding_rect(
+    out_ellipse_bounding_rect.GetLeft() + circle_border_width,
+    out_ellipse_bounding_rect.GetTop() + circle_border_width,
+    out_ellipse_bounding_rect.Width - 2 * circle_border_width,
+    out_ellipse_bounding_rect.Height - 2 * circle_border_width
+  );
+  LinearGradientBrush inner_circle_brush(
+    inner_ellise_bounding_rect,
+    IntColorToGdiColor(kRectangleTopColorRGBA),
+    IntColorToGdiColor(kRectangleBottomColorRGBA),
+    Gdiplus::LinearGradientMode::LinearGradientModeVertical
+  );
+  result = inner_circle_brush.GetLastStatus();
+  assert(result == Status::Ok);
+  result = frame.FillEllipse(&inner_circle_brush, inner_ellise_bounding_rect);
+  assert(result == Status::Ok);
+
+
+  int rectangle_line_left_left = out_ellipse_bounding_rect.GetLeft() + kRectangleLeft * circle_diameter;
+  int rectangle_line_left_top = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter + kRectangleLeftTopBorderRadius * circle_diameter;
+  int rectangle_line_left_bottom = rectangle_line_left_top + kRectangleHeight * circle_diameter - ;
+
+  
+
+  
+  int rectangle_line_right_left = rectangle_line_left_left + kRectangleWidth * circle_diameter;
+  int rectangle_line_right_top = rectangle_line_left_top;
+  int rectangle_line_right_bottom = rectangle_line_left_bottom;
+
+  result = frame.FillRectangle(&out_circle_brush, Rect(rectangle_line_left_left, rectangle_line_left_top, rectangle_line_right_left - rectangle_line_left_left, rectangle_line_right_bottom - rectangle_line_right_top));
+
+  GraphicsPath zoom_rect;
+  
+  zoom_rect.AddLine(
+
+
+
+  )
+
 
   assert(result == Status::Ok);
+
+
+  //GraphicsPath zoom_rectangle;
+  //zoom_rectangle.AddLine()
+  
 }
 
 LRESULT ZoomLogo::GdiPlusPaint(UINT msg, WPARAM w_param, LPARAM l_param)
@@ -125,6 +172,5 @@ LRESULT ZoomLogo::GdiPlusPaint(UINT msg, WPARAM w_param, LPARAM l_param)
   assert(succeeded);
   return 0;
 }
-
 
 NAMESPACE_END
