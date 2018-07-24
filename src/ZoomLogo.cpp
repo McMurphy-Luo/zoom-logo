@@ -36,12 +36,12 @@ namespace
   const double_t kTrapezoidRightTopTop = 80.0 / 240.0;
   const double_t kTrapezoidRightBottomRight = 191.0 / 240.0;
   const double_t kTrapezoidRightBottomBottom = 159.0 / 240.0;
-  const int_least32_t kBackgroundColor = 0x777777FF;
-  const int_least32_t kPrimaryColorRGBA = 0xffffffff;
-  const int_least32_t kRectangleTopColorRGBA = 0x2cbdffff;
-  const int_least32_t kRectangleBottomColorRGBA = 0x2c63ffff;
+  const int32_t kBackgroundColor = 0x777777FF;
+  const int32_t kPrimaryColorRGBA = 0xffffffff;
+  const int32_t kRectangleTopColorRGBA = 0x2cbdffff;
+  const int32_t kRectangleBottomColorRGBA = 0x2c63ffff;
 
-  Color IntColorToGdiColor(int_least32_t int_color_value)
+  Color IntColorToGdiColor(int32_t int_color_value)
   {
     return Color(
       int_color_value >> 0 & 0x000000FF,
@@ -51,13 +51,11 @@ namespace
     );
   }
 
-  D2D1_COLOR_F IntColorToD2DColor(int_least32_t int_color_value)
+  D2D1_COLOR_F IntColorToD2DColor(int32_t int_color_value)
   {
     return D2D1::ColorF(
-      int_color_value >> 24 & 0x000000FF,
-      int_color_value >> 16 & 0x000000FF,
-      int_color_value >> 8 & 0x000000FF,
-      int_color_value & 0x000000FF
+      (int_color_value >> 8) & 0x00FFFFFF,
+      static_cast<float>((int_color_value & 0x000000FF)) / 0xFF
     );
   }
 }
@@ -68,41 +66,204 @@ ZoomLogo::ZoomLogo(MainWindow* parent_window)
   : parent_window_(parent_window)
   , factory_()
   , render_target_()
+  , paint_connection_()
+  , size_connection_()
 {
   HRESULT result = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &factory_);
   assert(SUCCEEDED(result));
-  result = factory_->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(parent_window->WindowHandler()), &render_target_);
+  RECT client_rectangle = parent_window->ClientRectangle();
+  result = factory_->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(parent_window->WindowHandler(), D2D1::SizeU(client_rectangle.right - client_rectangle.left, client_rectangle.bottom - client_rectangle.top)), &render_target_);
   assert(SUCCEEDED(result));
-  gdiplus_paint_connection_ = parent_window_->Connect(WM_PAINT, std::bind(std::mem_fn(&ZoomLogo::GdiPlusPaint), this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+  paint_connection_ = parent_window_->Connect(WM_PAINT, std::bind(std::mem_fn(&ZoomLogo::Paint), this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+  size_connection_ = parent_window_->Connect(WM_SIZE, std::bind(std::mem_fn(&ZoomLogo::Size), this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
 ZoomLogo::~ZoomLogo()
 {
-  gdiplus_paint_connection_.disconnect();
+  paint_connection_.disconnect();
+}
+
+LRESULT ZoomLogo::Paint(UINT msg, WPARAM w_param, LPARAM l_param)
+{
+  OutputDebugString(_T("D2DPaint is called;"));
+  PAINTSTRUCT paint_struct;
+  HDC dc = BeginPaint(parent_window_->WindowHandler(), &paint_struct);
+  D2DRender();
+  BOOL succeeded = EndPaint(parent_window_->WindowHandler(), &paint_struct);
+  assert(succeeded);
+  return 0;
+}
+
+LRESULT ZoomLogo::Size(UINT msg, WPARAM w_param, LPARAM l_param)
+{
+  OutputDebugString(_T("ZoomLogo::Size is called;"));
+  RECT client_rectangle = parent_window_->ClientRectangle();
+  render_target_->Resize(D2D1::SizeU(client_rectangle.right - client_rectangle.left, client_rectangle.bottom - client_rectangle.top));
+  return 0;
 }
 
 void ZoomLogo::D2DRender()
 {
+  OutputDebugString(_T("D2DRender is called;"));
+  HRESULT result;
   render_target_->BeginDraw();
-  RECT client_rect = parent_window_->ClientRectangle();
+  D2D1_COLOR_F the_color = IntColorToD2DColor(kBackgroundColor);
+  render_target_->Clear(the_color);
 
-  CComPtr<ID2D1SolidColorBrush> bgBrush;
+  int client_width = render_target_->GetSize().width;
+  int client_height = render_target_->GetSize().height;
+
   CComPtr<ID2D1SolidColorBrush> primary_brush;
-  render_target_->CreateSolidColorBrush(IntColorToD2DColor(kBackgroundColor), &bgBrush);
-  render_target_->CreateSolidColorBrush(IntColorToD2DColor(kPrimaryColorRGBA), &primary_brush);
+  result = render_target_->CreateSolidColorBrush(IntColorToD2DColor(kPrimaryColorRGBA), &primary_brush);
+  assert(SUCCEEDED(result));
 
+  int circle_diameter = min(client_width, client_height);
+  int circle_radius = circle_diameter * kCircleRadius;
+  int circle_border_width = circle_radius * kCircleBorderWidth;
+
+  render_target_->FillEllipse(D2D1::Ellipse(D2D1::Point2( client_width / 2, client_height / 2 ), circle_diameter / 2, circle_diameter / 2), primary_brush);
+
+  /*
+  CComPtr<ID2D1LinearGradientBrush> inner_ellipse_brush;
+  result = render_target_->CreateLinearGradientBrush();
+
+  Rect inner_ellise_bounding_rect(
+    out_ellipse_bounding_rect.GetLeft() + circle_border_width,
+    out_ellipse_bounding_rect.GetTop() + circle_border_width,
+    out_ellipse_bounding_rect.Width - 2 * circle_border_width,
+    out_ellipse_bounding_rect.Height - 2 * circle_border_width
+  );
+  LinearGradientBrush inner_circle_brush(
+    inner_ellise_bounding_rect,
+    IntColorToGdiColor(kRectangleTopColorRGBA),
+    IntColorToGdiColor(kRectangleBottomColorRGBA),
+    Gdiplus::LinearGradientMode::LinearGradientModeVertical
+  );
+  result = inner_circle_brush.GetLastStatus();
+  assert(result == Status::Ok);
+  result = frame.FillEllipse(&inner_circle_brush, inner_ellise_bounding_rect);
+  assert(result == Status::Ok);
+
+
+  int rectangle_line_left_left = out_ellipse_bounding_rect.GetLeft() + kRectangleLeft * circle_diameter;
+  int rectangle_line_left_top = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter + kRectangleLeftTopBorderRadius * circle_diameter;
+  int rectangle_line_left_bottom = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter + kRectangleHeight * circle_diameter - kRectangleLeftBottomRadius * circle_diameter;
+
+
+  int rectangle_line_top_left = rectangle_line_left_left + kRectangleLeftTopBorderRadius * circle_diameter;
+  int rectangle_line_top_top = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter;
+  int rectangle_line_top_right = rectangle_line_left_left + kRectangleWidth * circle_diameter - kRectangleRightTopRadius * circle_diameter;
+
+  int rectangle_line_right_left = rectangle_line_left_left + kRectangleWidth * circle_diameter;
+  int rectangle_line_right_top = rectangle_line_top_top + kRectangleRightTopRadius * circle_diameter;
+  int rectangle_line_right_bottom = rectangle_line_top_top + kRectangleHeight * circle_diameter - kRectangleRightBottomRadius * circle_diameter;
+
+  int rectangle_line_bottom_left = rectangle_line_left_left + kRectangleLeftBottomRadius * circle_diameter;
+  int rectangle_line_bottom_bottom = rectangle_line_top_top + kRectangleHeight * circle_diameter;
+  int rectangle_line_bottom_right = rectangle_line_left_left + kRectangleWidth * circle_diameter - kRectangleRightBottomRadius * circle_diameter;
+
+  GraphicsPath zoom_rect;
+
+  zoom_rect.StartFigure();
+
+  zoom_rect.AddLine(
+    rectangle_line_left_left,
+    rectangle_line_left_bottom,
+    rectangle_line_left_left,
+    rectangle_line_left_top
+  );
+  zoom_rect.AddArc(
+    Rect(rectangle_line_left_left,
+      rectangle_line_top_top,
+      kRectangleLeftTopBorderRadius * circle_diameter * 2 + 1,
+      kRectangleLeftTopBorderRadius * circle_diameter * 2 + 1),
+    180,
+    90
+  );
+  zoom_rect.AddLine(
+    rectangle_line_top_left,
+    rectangle_line_top_top,
+    rectangle_line_top_right,
+    rectangle_line_top_top
+  );
+  zoom_rect.AddArc(
+    Rect(rectangle_line_right_left - kRectangleRightTopRadius * circle_diameter * 2,
+      rectangle_line_top_top,
+      kRectangleRightTopRadius * circle_diameter * 2 + 1, kRectangleRightTopRadius * circle_diameter * 2 + 1),
+    270,
+    90
+  );
+  zoom_rect.AddLine(
+    rectangle_line_right_left,
+    rectangle_line_right_top,
+    rectangle_line_right_left,
+    rectangle_line_right_bottom
+  );
+  zoom_rect.AddArc(
+    Rect(
+      rectangle_line_right_left - 2 * kRectangleRightBottomRadius * circle_diameter,
+      rectangle_line_bottom_bottom - 2 * kRectangleRightBottomRadius * circle_diameter,
+      2 * kRectangleRightBottomRadius * circle_diameter + 1,
+      2 * kRectangleRightBottomRadius * circle_diameter + 1
+    ),
+    0,
+    90
+  );
+  zoom_rect.AddLine(
+    rectangle_line_bottom_right,
+    rectangle_line_bottom_bottom,
+    rectangle_line_bottom_left,
+    rectangle_line_bottom_bottom
+  );
+  zoom_rect.AddArc(
+    Rect(
+      rectangle_line_left_left,
+      rectangle_line_bottom_bottom - 2 * circle_diameter * kRectangleLeftBottomRadius,
+      2 * circle_diameter * kRectangleLeftBottomRadius + 1,
+      2 * circle_diameter * kRectangleLeftBottomRadius + 1
+    ),
+    90,
+    90
+  );
+  zoom_rect.CloseFigure();
+
+  zoom_rect.StartFigure();
+  zoom_rect.AddLine(
+    static_cast<int>(kTrapezoidLeftTopLeft * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop(),
+    kTrapezoidRightTopRight * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidRightTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  );
+  zoom_rect.AddLine(
+    static_cast<int>(kTrapezoidRightTopRight * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidRightTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop(),
+    kTrapezoidRightBottomRight * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidRightBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  );
+  zoom_rect.AddLine(
+    static_cast<int>(kTrapezoidRightBottomRight * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidRightBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop(),
+    kTrapezoidLeftBottomLeft * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidLeftBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  );
+  zoom_rect.AddLine(
+    static_cast<int>(kTrapezoidLeftBottomLeft * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidLeftBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop(),
+    kTrapezoidLeftTopLeft * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  );
+  zoom_rect.CloseFigure();
+
+  Pen primary_color_pen(kPrimaryColorRGBA);
+  frame.FillPath(&out_circle_brush, &zoom_rect);
+  assert(result == Status::Ok);
+  
   
 
+  */
 
-  HRESULT result = render_target_->EndDraw();
+  result = render_target_->EndDraw();
   assert(SUCCEEDED(result));
-  OutputDebugString(_T("D2DRender is called;"));
-}
-
-LRESULT ZoomLogo::D2DPaint(UINT msg, WPARAM w_param, LPARAM l_param)
-{
-  OutputDebugString(_T("D2DPaint is called;"));
-  return 0;
 }
 
 void ZoomLogo::GdiPlusRender(HDC dc)
@@ -110,18 +271,14 @@ void ZoomLogo::GdiPlusRender(HDC dc)
   OutputDebugString(_T("GdiPlusRender is called;"));  
   Status result;
   Graphics frame(dc);
-  frame.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  result = frame.GetLastStatus();
+  result = frame.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   assert(result == Status::Ok);
+  result = frame.Clear(IntColorToGdiColor(kBackgroundColor));
+  assert(result == Status::Ok);
+
   RECT client_rect = parent_window_->ClientRectangle();
   int client_width = client_rect.right - client_rect.left;
   int client_height = client_rect.bottom - client_rect.top;
-  SolidBrush background_brush(IntColorToGdiColor(kBackgroundColor));
-  result = background_brush.GetLastStatus();
-  assert(result == Status::Ok);
-  Rect frame_rectangle(client_rect.left, client_rect.top, client_width, client_height);
-  result = frame.FillRectangle(&background_brush, frame_rectangle);
-
   SolidBrush out_circle_brush(IntColorToGdiColor(kPrimaryColorRGBA));
   result = out_circle_brush.GetLastStatus();
   assert(result == Status::Ok);
@@ -267,17 +424,6 @@ void ZoomLogo::GdiPlusRender(HDC dc)
   Pen primary_color_pen(kPrimaryColorRGBA);
   frame.FillPath(&out_circle_brush, &zoom_rect);
   assert(result == Status::Ok);
-}
-
-LRESULT ZoomLogo::GdiPlusPaint(UINT msg, WPARAM w_param, LPARAM l_param)
-{
-  OutputDebugString(_T("GdiPlusPaint is called;"));
-  PAINTSTRUCT paint_struct;
-  HDC dc = BeginPaint(parent_window_->WindowHandler(), &paint_struct);
-  GdiPlusRender(dc);
-  BOOL succeeded = EndPaint(parent_window_->WindowHandler(), &paint_struct);
-  assert(succeeded);
-  return 0;
 }
 
 NAMESPACE_END

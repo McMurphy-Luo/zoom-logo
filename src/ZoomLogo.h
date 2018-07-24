@@ -24,20 +24,20 @@ public:
 
   ~ZoomLogo();
 
+  LRESULT Paint(UINT msg, WPARAM w_param, LPARAM l_param);
+
+  LRESULT Size(UINT msg, WPARAM w_param, LPARAM l_param);
+
   void D2DRender();
 
-  LRESULT D2DPaint(UINT msg, WPARAM w_param, LPARAM l_param);
-
   void GdiPlusRender(HDC dc);
-
-  LRESULT GdiPlusPaint(UINT msg, WPARAM w_param, LPARAM l_param);
 
 private:
   MainWindow* parent_window_;
   CComPtr<ID2D1Factory> factory_;
   CComPtr<ID2D1HwndRenderTarget> render_target_;
-  boost::signals2::connection d2d_paint_connection_;
-  boost::signals2::connection gdiplus_paint_connection_;
+  boost::signals2::connection paint_connection_;
+  boost::signals2::connection size_connection_;
 };
 
 NAMESPACE_END
