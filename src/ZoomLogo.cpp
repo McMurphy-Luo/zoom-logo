@@ -50,6 +50,16 @@ namespace
       int_color_value >> 8 & 0x000000FF
     );
   }
+
+  D2D1_COLOR_F IntColorToD2DColor(int_least32_t int_color_value)
+  {
+    return D2D1::ColorF(
+      int_color_value >> 24 & 0x000000FF,
+      int_color_value >> 16 & 0x000000FF,
+      int_color_value >> 8 & 0x000000FF,
+      int_color_value & 0x000000FF
+    );
+  }
 }
 
 NAMESPACE_BEGIN
@@ -73,6 +83,19 @@ ZoomLogo::~ZoomLogo()
 
 void ZoomLogo::D2DRender()
 {
+  render_target_->BeginDraw();
+  RECT client_rect = parent_window_->ClientRectangle();
+
+  CComPtr<ID2D1SolidColorBrush> bgBrush;
+  CComPtr<ID2D1SolidColorBrush> primary_brush;
+  render_target_->CreateSolidColorBrush(IntColorToD2DColor(kBackgroundColor), &bgBrush);
+  render_target_->CreateSolidColorBrush(IntColorToD2DColor(kPrimaryColorRGBA), &primary_brush);
+
+  
+
+
+  HRESULT result = render_target_->EndDraw();
+  assert(SUCCEEDED(result));
   OutputDebugString(_T("D2DRender is called;"));
 }
 
@@ -212,18 +235,38 @@ void ZoomLogo::GdiPlusRender(HDC dc)
     90,
     90
   );
-  
+  zoom_rect.CloseFigure();
+
+  zoom_rect.StartFigure();
+  zoom_rect.AddLine(
+    static_cast<int>(kTrapezoidLeftTopLeft * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop(),
+    kTrapezoidRightTopRight * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidRightTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  );
+  zoom_rect.AddLine(
+    static_cast<int>(kTrapezoidRightTopRight * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidRightTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop(),
+    kTrapezoidRightBottomRight * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidRightBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  );
+  zoom_rect.AddLine(
+    static_cast<int>(kTrapezoidRightBottomRight * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidRightBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop(),
+    kTrapezoidLeftBottomLeft * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidLeftBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  );
+  zoom_rect.AddLine(
+    static_cast<int>(kTrapezoidLeftBottomLeft * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidLeftBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop(),
+    kTrapezoidLeftTopLeft * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
+    kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  );
   zoom_rect.CloseFigure();
 
   Pen primary_color_pen(kPrimaryColorRGBA);
-
   frame.FillPath(&out_circle_brush, &zoom_rect);
   assert(result == Status::Ok);
-
-
-  //GraphicsPath zoom_rectangle;
-  //zoom_rectangle.AddLine()
-  
 }
 
 LRESULT ZoomLogo::GdiPlusPaint(UINT msg, WPARAM w_param, LPARAM l_param)
