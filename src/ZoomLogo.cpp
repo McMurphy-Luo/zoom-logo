@@ -1,13 +1,21 @@
 #include "./ZoomLogo.h"
 #include <cassert>
-#include <chrono>
 #include <functional>
 #include <gdiplus.h>
+#include <dwrite.h>
+#include <tchar.h>
 #include "./MainWindow.h"
 
 using std::chrono::high_resolution_clock;
+using std::chrono::time_point;
+using std::chrono::duration;
+using std::chrono::duration_cast;
+using std::chrono::seconds;
+using std::mem_fn;
+using std::bind;
 using std::double_t;
 using std::int_least32_t;
+using std::wstring;
 using Gdiplus::Graphics;
 using Gdiplus::SolidBrush;
 using Gdiplus::Color;
@@ -76,8 +84,8 @@ ZoomLogo::ZoomLogo(MainWindow* parent_window)
   RECT client_rectangle = parent_window->ClientRectangle();
   result = factory_->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(parent_window->WindowHandler(), D2D1::SizeU(client_rectangle.right - client_rectangle.left, client_rectangle.bottom - client_rectangle.top)), &render_target_);
   assert(SUCCEEDED(result));
-  paint_connection_ = parent_window_->Connect(WM_PAINT, std::bind(std::mem_fn(&ZoomLogo::Paint), this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-  size_connection_ = parent_window_->Connect(WM_SIZE, std::bind(std::mem_fn(&ZoomLogo::Size), this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+  paint_connection_ = parent_window_->Connect(WM_PAINT, bind(mem_fn(&ZoomLogo::Paint), this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+  size_connection_ = parent_window_->Connect(WM_SIZE, bind(mem_fn(&ZoomLogo::Size), this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
 ZoomLogo::~ZoomLogo()
@@ -90,7 +98,7 @@ LRESULT ZoomLogo::Paint(UINT msg, WPARAM w_param, LPARAM l_param)
   OutputDebugString(_T("D2DPaint is called;"));
   PAINTSTRUCT paint_struct;
   HDC dc = BeginPaint(parent_window_->WindowHandler(), &paint_struct);
-  GdiPlusRender(dc);
+  D2DRender();
   BOOL succeeded = EndPaint(parent_window_->WindowHandler(), &paint_struct);
   assert(succeeded);
   return 0;
@@ -253,6 +261,44 @@ void ZoomLogo::D2DRender()
   result = zoom_logo_sink->Close();
   assert(SUCCEEDED(result));
   render_target_->FillGeometry(zoom_logo_path, primary_brush);
+
+  time_point<high_resolution_clock> previous_time = now_;
+  now_ = high_resolution_clock::now();
+  high_resolution_clock::duration time_consumed = now_ - previous_time;
+  seconds one_second(1);
+  high_resolution_clock::duration one_second_measured_in_high_resolution = duration_cast<high_resolution_clock::duration>(one_second);
+  int frame_count = one_second_measured_in_high_resolution / time_consumed;
+  
+  wchar_t buf[10];
+  memset(buf, 0, 10);
+  
+  int itow_success = _itow_s(frame_count, buf, sizeof(buf) / sizeof(wchar_t), 10);
+  int size_t = sizeof(buf);
+  assert(itow_success == 0);
+  
+  IDWriteFactory* factory_pointer;
+  CComPtr<IDWriteFactory> write_factory;
+  result = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&factory_pointer);
+  assert(SUCCEEDED(result));
+  write_factory = factory_pointer;
+  CComPtr<IDWriteTextFormat> text_format;
+  CComPtr<IDWriteTextLayout> text_layout;
+  result = write_factory->CreateTextFormat(
+    L"Times New Roman",
+    nullptr,
+    DWRITE_FONT_WEIGHT::DWRITE_FONT_WEIGHT_NORMAL,
+    DWRITE_FONT_STYLE::DWRITE_FONT_STYLE_NORMAL,
+    DWRITE_FONT_STRETCH::DWRITE_FONT_STRETCH_NORMAL,
+    32,
+    L"en-US",
+    &text_format
+  );
+  assert(SUCCEEDED(result));
+  result = write_factory->CreateTextLayout(buf, wcslen(buf), text_format, client_width, client_height, &text_layout);
+  assert(SUCCEEDED(result));
+
+  render_target_->DrawTextLayout(D2D1::Point2(10, 10), text_layout, primary_brush);
+  
   result = render_target_->EndDraw();
   assert(SUCCEEDED(result));
 }
@@ -411,6 +457,8 @@ void ZoomLogo::GdiPlusRender(HDC dc)
     kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop()
   );
   zoom_rect.CloseFigure();
+
+  
 
   Pen primary_color_pen(kPrimaryColorRGBA);
   frame.FillPath(&out_circle_brush, &zoom_rect);
