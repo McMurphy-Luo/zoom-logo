@@ -123,6 +123,26 @@ void ZoomLogo::D2DRender()
 
   render_target_->FillEllipse(D2D1::Ellipse(D2D1::Point2( client_width / 2, client_height / 2 ), circle_diameter / 2, circle_diameter / 2), primary_brush);
 
+  D2D1_GRADIENT_STOP brush_descriptor[2];
+  brush_descriptor[0].color = IntColorToD2DColor(kRectangleTopColorRGBA);
+  brush_descriptor[0].position = 0.0;
+  brush_descriptor[1].color = IntColorToD2DColor(kRectangleBottomColorRGBA);
+  brush_descriptor[1].position = 1.0;
+  CComPtr<ID2D1GradientStopCollection> brush_description;
+  result = render_target_->CreateGradientStopCollection(brush_descriptor, 2, &brush_description);
+  assert(SUCCEEDED(result));
+
+  D2D1_ELLIPSE inner_ellipse = D2D1::Ellipse(D2D1::Point2(client_width / 2, client_height / 2), circle_diameter / 2 - circle_diameter * kCircleBorderWidth, circle_diameter / 2 - circle_diameter * kCircleBorderWidth);
+  CComPtr<ID2D1LinearGradientBrush> cirlce_bg_brush;
+  result = render_target_->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties(
+    D2D1::Point2F(client_width / 2, client_height / 2 - circle_diameter / 2 + circle_diameter * kCircleBorderWidth)
+    ,
+    D2D1::Point2F(client_width / 2, client_height / 2 + circle_diameter / 2 - circle_diameter * kCircleBorderWidth)
+  ), brush_description, &cirlce_bg_brush);
+  assert(SUCCEEDED(result));
+
+  render_target_->FillEllipse(inner_ellipse, cirlce_bg_brush);
+
   /*
   CComPtr<ID2D1LinearGradientBrush> inner_ellipse_brush;
   result = render_target_->CreateLinearGradientBrush();
