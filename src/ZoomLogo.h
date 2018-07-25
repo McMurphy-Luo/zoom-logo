@@ -12,6 +12,7 @@
 #include <d2d1.h>
 #include <boost/signals2.hpp>
 #include <boost/noncopyable.hpp>
+#include <chrono>
 
 NAMESPACE_BEGIN
 
@@ -34,6 +35,7 @@ public:
 
 private:
   MainWindow* parent_window_;
+  std::chrono::time_point<std::chrono::high_resolution_clock> now_;
   CComPtr<ID2D1Factory> factory_;
   CComPtr<ID2D1HwndRenderTarget> render_target_;
   boost::signals2::connection paint_connection_;

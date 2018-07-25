@@ -5,6 +5,9 @@
 #include <gdiplus.h>
 #include "./MainWindow.h"
 
+using std::chrono::high_resolution_clock;
+using std::double_t;
+using std::int_least32_t;
 using Gdiplus::Graphics;
 using Gdiplus::SolidBrush;
 using Gdiplus::Color;
@@ -13,8 +16,6 @@ using Gdiplus::Status;
 using Gdiplus::Pen;
 using Gdiplus::LinearGradientBrush;
 using Gdiplus::GraphicsPath;
-using std::double_t;
-using std::int_least32_t;
 
 namespace
 {
@@ -64,6 +65,7 @@ NAMESPACE_BEGIN
 
 ZoomLogo::ZoomLogo(MainWindow* parent_window)
   : parent_window_(parent_window)
+  , now_(high_resolution_clock::now())
   , factory_()
   , render_target_()
   , paint_connection_()
@@ -88,7 +90,7 @@ LRESULT ZoomLogo::Paint(UINT msg, WPARAM w_param, LPARAM l_param)
   OutputDebugString(_T("D2DPaint is called;"));
   PAINTSTRUCT paint_struct;
   HDC dc = BeginPaint(parent_window_->WindowHandler(), &paint_struct);
-  D2DRender();
+  GdiPlusRender(dc);
   BOOL succeeded = EndPaint(parent_window_->WindowHandler(), &paint_struct);
   assert(succeeded);
   return 0;
@@ -104,6 +106,7 @@ LRESULT ZoomLogo::Size(UINT msg, WPARAM w_param, LPARAM l_param)
 
 void ZoomLogo::D2DRender()
 {
+  now_ = high_resolution_clock::now();
   OutputDebugString(_T("D2DRender is called;"));
   HRESULT result;
   render_target_->BeginDraw();
@@ -140,38 +143,20 @@ void ZoomLogo::D2DRender()
     D2D1::Point2F(client_width / 2, client_height / 2 + circle_diameter / 2 - circle_diameter * kCircleBorderWidth)
   ), brush_description, &cirlce_bg_brush);
   assert(SUCCEEDED(result));
-
   render_target_->FillEllipse(inner_ellipse, cirlce_bg_brush);
 
-  /*
-  CComPtr<ID2D1LinearGradientBrush> inner_ellipse_brush;
-  result = render_target_->CreateLinearGradientBrush();
+  D2D1_RECT_L out_ellipse_bounding_rect;
+  out_ellipse_bounding_rect.left = client_width / 2 - circle_diameter / 2;
+  out_ellipse_bounding_rect.right = client_width / 2 + circle_diameter / 2;
+  out_ellipse_bounding_rect.top = client_height / 2 - circle_diameter / 2;
+  out_ellipse_bounding_rect.bottom = client_height / 2 + circle_diameter / 2;
 
-  Rect inner_ellise_bounding_rect(
-    out_ellipse_bounding_rect.GetLeft() + circle_border_width,
-    out_ellipse_bounding_rect.GetTop() + circle_border_width,
-    out_ellipse_bounding_rect.Width - 2 * circle_border_width,
-    out_ellipse_bounding_rect.Height - 2 * circle_border_width
-  );
-  LinearGradientBrush inner_circle_brush(
-    inner_ellise_bounding_rect,
-    IntColorToGdiColor(kRectangleTopColorRGBA),
-    IntColorToGdiColor(kRectangleBottomColorRGBA),
-    Gdiplus::LinearGradientMode::LinearGradientModeVertical
-  );
-  result = inner_circle_brush.GetLastStatus();
-  assert(result == Status::Ok);
-  result = frame.FillEllipse(&inner_circle_brush, inner_ellise_bounding_rect);
-  assert(result == Status::Ok);
-
-
-  int rectangle_line_left_left = out_ellipse_bounding_rect.GetLeft() + kRectangleLeft * circle_diameter;
-  int rectangle_line_left_top = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter + kRectangleLeftTopBorderRadius * circle_diameter;
-  int rectangle_line_left_bottom = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter + kRectangleHeight * circle_diameter - kRectangleLeftBottomRadius * circle_diameter;
-
+  int rectangle_line_left_left = out_ellipse_bounding_rect.left + kRectangleLeft * circle_diameter;
+  int rectangle_line_left_top = out_ellipse_bounding_rect.top + kRectangleTop * circle_diameter + kRectangleLeftTopBorderRadius * circle_diameter;
+  int rectangle_line_left_bottom = out_ellipse_bounding_rect.top + kRectangleTop * circle_diameter + kRectangleHeight * circle_diameter - kRectangleLeftBottomRadius * circle_diameter;
 
   int rectangle_line_top_left = rectangle_line_left_left + kRectangleLeftTopBorderRadius * circle_diameter;
-  int rectangle_line_top_top = out_ellipse_bounding_rect.GetTop() + kRectangleTop * circle_diameter;
+  int rectangle_line_top_top = out_ellipse_bounding_rect.top + kRectangleTop * circle_diameter;
   int rectangle_line_top_right = rectangle_line_left_left + kRectangleWidth * circle_diameter - kRectangleRightTopRadius * circle_diameter;
 
   int rectangle_line_right_left = rectangle_line_left_left + kRectangleWidth * circle_diameter;
@@ -182,106 +167,92 @@ void ZoomLogo::D2DRender()
   int rectangle_line_bottom_bottom = rectangle_line_top_top + kRectangleHeight * circle_diameter;
   int rectangle_line_bottom_right = rectangle_line_left_left + kRectangleWidth * circle_diameter - kRectangleRightBottomRadius * circle_diameter;
 
-  GraphicsPath zoom_rect;
+  CComPtr<ID2D1PathGeometry> zoom_logo_path;
+  result = factory_->CreatePathGeometry(&zoom_logo_path);
+  assert(SUCCEEDED(result));
 
-  zoom_rect.StartFigure();
+  CComPtr<ID2D1GeometrySink> zoom_logo_sink;
+  result = zoom_logo_path->Open(&zoom_logo_sink);
+  assert(SUCCEEDED(result));
 
-  zoom_rect.AddLine(
-    rectangle_line_left_left,
-    rectangle_line_left_bottom,
-    rectangle_line_left_left,
-    rectangle_line_left_top
-  );
-  zoom_rect.AddArc(
-    Rect(rectangle_line_left_left,
-      rectangle_line_top_top,
-      kRectangleLeftTopBorderRadius * circle_diameter * 2 + 1,
-      kRectangleLeftTopBorderRadius * circle_diameter * 2 + 1),
-    180,
-    90
-  );
-  zoom_rect.AddLine(
-    rectangle_line_top_left,
-    rectangle_line_top_top,
+  zoom_logo_sink->BeginFigure(D2D1::Point2(rectangle_line_left_left, rectangle_line_left_bottom), D2D1_FIGURE_BEGIN_FILLED);
+  zoom_logo_sink->AddLine(D2D1::Point2(rectangle_line_left_left, rectangle_line_left_top));
+  zoom_logo_sink->AddArc(D2D1::ArcSegment(
+    D2D1::Point2(rectangle_line_top_left, rectangle_line_top_top),
+    D2D1::Size(kRectangleLeftTopBorderRadius * circle_diameter, kRectangleLeftTopBorderRadius * circle_diameter),
+    0,
+    D2D1_SWEEP_DIRECTION_CLOCKWISE,
+    D2D1_ARC_SIZE_SMALL
+  ));
+  zoom_logo_sink->AddLine(D2D1::Point2(
     rectangle_line_top_right,
     rectangle_line_top_top
-  );
-  zoom_rect.AddArc(
-    Rect(rectangle_line_right_left - kRectangleRightTopRadius * circle_diameter * 2,
-      rectangle_line_top_top,
-      kRectangleRightTopRadius * circle_diameter * 2 + 1, kRectangleRightTopRadius * circle_diameter * 2 + 1),
-    270,
-    90
-  );
-  zoom_rect.AddLine(
-    rectangle_line_right_left,
-    rectangle_line_right_top,
+  ));
+  
+  zoom_logo_sink->AddArc(D2D1::ArcSegment(
+    D2D1::Point2(rectangle_line_right_left, rectangle_line_right_top),
+    D2D1::Size(kRectangleRightTopRadius * circle_diameter, kRectangleRightTopRadius * circle_diameter),
+    0,
+    D2D1_SWEEP_DIRECTION_CLOCKWISE,
+    D2D1_ARC_SIZE_SMALL
+  ));
+  zoom_logo_sink->AddLine(D2D1::Point2(
     rectangle_line_right_left,
     rectangle_line_right_bottom
-  );
-  zoom_rect.AddArc(
-    Rect(
-      rectangle_line_right_left - 2 * kRectangleRightBottomRadius * circle_diameter,
-      rectangle_line_bottom_bottom - 2 * kRectangleRightBottomRadius * circle_diameter,
-      2 * kRectangleRightBottomRadius * circle_diameter + 1,
-      2 * kRectangleRightBottomRadius * circle_diameter + 1
-    ),
+  ));
+  zoom_logo_sink->AddArc(D2D1::ArcSegment(
+    D2D1::Point2(rectangle_line_bottom_right, rectangle_line_bottom_bottom),
+    D2D1::Size(kRectangleRightBottomRadius * circle_diameter, kRectangleRightBottomRadius * circle_diameter),
     0,
-    90
-  );
-  zoom_rect.AddLine(
-    rectangle_line_bottom_right,
-    rectangle_line_bottom_bottom,
-    rectangle_line_bottom_left,
-    rectangle_line_bottom_bottom
-  );
-  zoom_rect.AddArc(
-    Rect(
-      rectangle_line_left_left,
-      rectangle_line_bottom_bottom - 2 * circle_diameter * kRectangleLeftBottomRadius,
-      2 * circle_diameter * kRectangleLeftBottomRadius + 1,
-      2 * circle_diameter * kRectangleLeftBottomRadius + 1
+    D2D1_SWEEP_DIRECTION_CLOCKWISE,
+    D2D1_ARC_SIZE_SMALL
+  ));
+  zoom_logo_sink->AddLine(D2D1::Point2(rectangle_line_bottom_left, rectangle_line_bottom_bottom));
+  zoom_logo_sink->AddArc(D2D1::ArcSegment(
+    D2D1::Point2(rectangle_line_left_left, rectangle_line_left_bottom),
+    D2D1::Size(kRectangleLeftBottomRadius * circle_diameter, kRectangleLeftBottomRadius * circle_diameter),
+    0,
+    D2D1_SWEEP_DIRECTION_CLOCKWISE,
+    D2D1_ARC_SIZE_SMALL
+  ));
+  
+  zoom_logo_sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+
+  zoom_logo_sink->BeginFigure(
+    D2D1::Point2(
+    kTrapezoidLeftTopLeft * circle_diameter + out_ellipse_bounding_rect.left,
+    kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.top
     ),
-    90,
-    90
+    D2D1_FIGURE_BEGIN_FILLED
   );
-  zoom_rect.CloseFigure();
-
-  zoom_rect.StartFigure();
-  zoom_rect.AddLine(
-    static_cast<int>(kTrapezoidLeftTopLeft * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
-    kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop(),
-    kTrapezoidRightTopRight * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
-    kTrapezoidRightTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  zoom_logo_sink->AddLine(
+    D2D1::Point2(
+      kTrapezoidRightTopRight * circle_diameter + out_ellipse_bounding_rect.left,
+      kTrapezoidRightTopTop * circle_diameter + out_ellipse_bounding_rect.top
+    )
   );
-  zoom_rect.AddLine(
-    static_cast<int>(kTrapezoidRightTopRight * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
-    kTrapezoidRightTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop(),
-    kTrapezoidRightBottomRight * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
-    kTrapezoidRightBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  zoom_logo_sink->AddLine(
+    D2D1::Point2(
+      kTrapezoidRightBottomRight * circle_diameter + out_ellipse_bounding_rect.left,
+      kTrapezoidRightBottomBottom * circle_diameter + out_ellipse_bounding_rect.top
+    )
   );
-  zoom_rect.AddLine(
-    static_cast<int>(kTrapezoidRightBottomRight * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
-    kTrapezoidRightBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop(),
-    kTrapezoidLeftBottomLeft * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
-    kTrapezoidLeftBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  zoom_logo_sink->AddLine(
+    D2D1::Point2(
+      kTrapezoidLeftBottomLeft * circle_diameter + out_ellipse_bounding_rect.left,
+      kTrapezoidLeftBottomBottom * circle_diameter + out_ellipse_bounding_rect.top
+    )
   );
-  zoom_rect.AddLine(
-    static_cast<int>(kTrapezoidLeftBottomLeft * circle_diameter) + out_ellipse_bounding_rect.GetLeft(),
-    kTrapezoidLeftBottomBottom * circle_diameter + out_ellipse_bounding_rect.GetTop(),
-    kTrapezoidLeftTopLeft * circle_diameter + out_ellipse_bounding_rect.GetLeft(),
-    kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.GetTop()
+  zoom_logo_sink->AddLine(
+    D2D1::Point2(
+      kTrapezoidLeftTopLeft * circle_diameter + out_ellipse_bounding_rect.left,
+      kTrapezoidLeftTopTop * circle_diameter + out_ellipse_bounding_rect.top
+    )
   );
-  zoom_rect.CloseFigure();
-
-  Pen primary_color_pen(kPrimaryColorRGBA);
-  frame.FillPath(&out_circle_brush, &zoom_rect);
-  assert(result == Status::Ok);
-  
-  
-
-  */
-
+  zoom_logo_sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+  result = zoom_logo_sink->Close();
+  assert(SUCCEEDED(result));
+  render_target_->FillGeometry(zoom_logo_path, primary_brush);
   result = render_target_->EndDraw();
   assert(SUCCEEDED(result));
 }
