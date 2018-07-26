@@ -1,7 +1,6 @@
 #include "./ZoomLogo.h"
 #include <cassert>
 #include <functional>
-#include <gdiplus.h>
 #include <dwrite.h>
 #include <tchar.h>
 #include "./MainWindow.h"
@@ -102,7 +101,7 @@ LRESULT ZoomLogo::Paint(UINT msg, WPARAM w_param, LPARAM l_param)
   OutputDebugString(_T("D2DPaint is called;"));
   PAINTSTRUCT paint_struct;
   HDC dc = BeginPaint(parent_window_->WindowHandler(), &paint_struct);
-  D2DRender();
+  GdiPlusRender(dc);
   BOOL succeeded = EndPaint(parent_window_->WindowHandler(), &paint_struct);
   assert(succeeded);
   return 0;
@@ -116,7 +115,7 @@ LRESULT ZoomLogo::Size(UINT msg, WPARAM w_param, LPARAM l_param)
   return 0;
 }
 
-void ZoomLogo::D2DRender()
+void ZoomLogo::D2DRender(ID2D1RenderTarget* render_target)
 {
   OutputDebugString(_T("D2DRender is called;"));
   time_point<high_resolution_clock> time_before_render = high_resolution_clock::now();

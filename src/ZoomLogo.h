@@ -8,11 +8,12 @@
 #define ZOOM_LOGO_ZOOM_LOGO_H_
 
 #include "./Define.h"
-#include <atlbase.h>
-#include <d2d1.h>
+#include <chrono>
 #include <boost/signals2.hpp>
 #include <boost/noncopyable.hpp>
-#include <chrono>
+#include <atlbase.h>
+#include <gdiplus.h>
+#include <d2d1.h>
 
 NAMESPACE_BEGIN
 
@@ -29,7 +30,7 @@ public:
 
   LRESULT Size(UINT msg, WPARAM w_param, LPARAM l_param);
 
-  void D2DRender();
+  void D2DRender(ID2D1RenderTarget* render_target);
 
   void GdiPlusRender(HDC dc);
 
