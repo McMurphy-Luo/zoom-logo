@@ -18,6 +18,10 @@ using std::int_least32_t;
 using std::wstring;
 using Gdiplus::Graphics;
 using Gdiplus::SolidBrush;
+using Gdiplus::FontStyle;
+using Gdiplus::FontFamily;
+using Gdiplus::Font;
+using Gdiplus::Unit;
 using Gdiplus::Color;
 using Gdiplus::Rect;
 using Gdiplus::Status;
@@ -73,7 +77,7 @@ NAMESPACE_BEGIN
 
 ZoomLogo::ZoomLogo(MainWindow* parent_window)
   : parent_window_(parent_window)
-  , now_(high_resolution_clock::now())
+  , last_render_time_consume_(duration_cast<high_resolution_clock::duration>(seconds(1)))
   , factory_()
   , render_target_()
   , paint_connection_()
@@ -114,8 +118,8 @@ LRESULT ZoomLogo::Size(UINT msg, WPARAM w_param, LPARAM l_param)
 
 void ZoomLogo::D2DRender()
 {
-  now_ = high_resolution_clock::now();
   OutputDebugString(_T("D2DRender is called;"));
+  time_point<high_resolution_clock> time_before_render = high_resolution_clock::now();
   HRESULT result;
   render_target_->BeginDraw();
   D2D1_COLOR_F the_color = IntColorToD2DColor(kBackgroundColor);
@@ -262,18 +266,13 @@ void ZoomLogo::D2DRender()
   assert(SUCCEEDED(result));
   render_target_->FillGeometry(zoom_logo_path, primary_brush);
 
-  time_point<high_resolution_clock> previous_time = now_;
-  now_ = high_resolution_clock::now();
-  high_resolution_clock::duration time_consumed = now_ - previous_time;
   seconds one_second(1);
-  high_resolution_clock::duration one_second_measured_in_high_resolution = duration_cast<high_resolution_clock::duration>(one_second);
-  int frame_count = one_second_measured_in_high_resolution / time_consumed;
+  int frame_count =  duration_cast<high_resolution_clock::duration>(one_second) / last_render_time_consume_;
   
   wchar_t buf[10];
   memset(buf, 0, 10);
   
   int itow_success = _itow_s(frame_count, buf, sizeof(buf) / sizeof(wchar_t), 10);
-  int size_t = sizeof(buf);
   assert(itow_success == 0);
   
   IDWriteFactory* factory_pointer;
@@ -301,11 +300,14 @@ void ZoomLogo::D2DRender()
   
   result = render_target_->EndDraw();
   assert(SUCCEEDED(result));
+
+  last_render_time_consume_ = high_resolution_clock::now() - time_before_render;
 }
 
 void ZoomLogo::GdiPlusRender(HDC dc)
 {
   OutputDebugString(_T("GdiPlusRender is called;"));  
+  time_point<high_resolution_clock> time_before_render = high_resolution_clock::now();
   Status result;
   Graphics frame(dc);
   result = frame.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
@@ -458,11 +460,23 @@ void ZoomLogo::GdiPlusRender(HDC dc)
   );
   zoom_rect.CloseFigure();
 
-  
-
   Pen primary_color_pen(kPrimaryColorRGBA);
   frame.FillPath(&out_circle_brush, &zoom_rect);
   assert(result == Status::Ok);
+
+  FontFamily fontFamily(L"Times New Roman");
+  Font font(&fontFamily, 32, FontStyle::FontStyleRegular, Unit::UnitPixel);
+  seconds one_second(1);
+  int frame_count = duration_cast<high_resolution_clock::duration>(one_second) / last_render_time_consume_;
+  wchar_t buf[10];
+  memset(buf, 0, 10);
+  int itow_success = _itow_s(frame_count, buf, sizeof(buf) / sizeof(wchar_t), 10);
+  assert(itow_success == 0);
+
+  result = frame.DrawString(buf, -1, &font, Gdiplus::PointF(10, 10), &out_circle_brush);
+  assert(result == Status::Ok);
+
+  last_render_time_consume_ = high_resolution_clock::now() - time_before_render;
 }
 
 NAMESPACE_END

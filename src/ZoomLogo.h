@@ -35,7 +35,7 @@ public:
 
 private:
   MainWindow* parent_window_;
-  std::chrono::time_point<std::chrono::high_resolution_clock> now_;
+  std::chrono::high_resolution_clock::duration last_render_time_consume_;
   CComPtr<ID2D1Factory> factory_;
   CComPtr<ID2D1HwndRenderTarget> render_target_;
   boost::signals2::connection paint_connection_;
