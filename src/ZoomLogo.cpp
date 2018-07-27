@@ -101,7 +101,33 @@ LRESULT ZoomLogo::Paint(UINT msg, WPARAM w_param, LPARAM l_param)
   OutputDebugString(_T("D2DPaint is called;"));
   PAINTSTRUCT paint_struct;
   HDC dc = BeginPaint(parent_window_->WindowHandler(), &paint_struct);
+
   GdiPlusRender(dc);
+
+  /*
+  HRESULT result;
+  CComPtr<ID2D1DCRenderTarget> dc_render_target;
+  D2D1_RENDER_TARGET_PROPERTIES dc_render_target_properties = D2D1::RenderTargetProperties(
+    D2D1_RENDER_TARGET_TYPE_DEFAULT,
+    D2D1::PixelFormat(
+      DXGI_FORMAT_B8G8R8A8_UNORM,
+      D2D1_ALPHA_MODE_IGNORE),
+    0,
+    0,
+    D2D1_RENDER_TARGET_USAGE_NONE,
+    D2D1_FEATURE_LEVEL_DEFAULT
+  );
+  result = factory_->CreateDCRenderTarget(&dc_render_target_properties, &dc_render_target);
+  assert(SUCCEEDED(result));
+  RECT window_rect = parent_window_->ClientRectangle();
+  dc_render_target->BindDC(dc, &window_rect);
+  D2DRender(dc_render_target);
+  */
+
+  /*
+  D2DRender(render_target_);
+  */
+
   BOOL succeeded = EndPaint(parent_window_->WindowHandler(), &paint_struct);
   assert(succeeded);
   return 0;
@@ -120,22 +146,22 @@ void ZoomLogo::D2DRender(ID2D1RenderTarget* render_target)
   OutputDebugString(_T("D2DRender is called;"));
   time_point<high_resolution_clock> time_before_render = high_resolution_clock::now();
   HRESULT result;
-  render_target_->BeginDraw();
+  render_target->BeginDraw();
   D2D1_COLOR_F the_color = IntColorToD2DColor(kBackgroundColor);
-  render_target_->Clear(the_color);
+  render_target->Clear(the_color);
 
-  int client_width = render_target_->GetSize().width;
-  int client_height = render_target_->GetSize().height;
+  int client_width = render_target->GetSize().width;
+  int client_height = render_target->GetSize().height;
 
   CComPtr<ID2D1SolidColorBrush> primary_brush;
-  result = render_target_->CreateSolidColorBrush(IntColorToD2DColor(kPrimaryColorRGBA), &primary_brush);
+  result = render_target->CreateSolidColorBrush(IntColorToD2DColor(kPrimaryColorRGBA), &primary_brush);
   assert(SUCCEEDED(result));
 
   int circle_diameter = min(client_width, client_height);
   int circle_radius = circle_diameter * kCircleRadius;
   int circle_border_width = circle_radius * kCircleBorderWidth;
 
-  render_target_->FillEllipse(D2D1::Ellipse(D2D1::Point2( client_width / 2, client_height / 2 ), circle_diameter / 2, circle_diameter / 2), primary_brush);
+  render_target->FillEllipse(D2D1::Ellipse(D2D1::Point2( client_width / 2, client_height / 2 ), circle_diameter / 2, circle_diameter / 2), primary_brush);
 
   D2D1_GRADIENT_STOP brush_descriptor[2];
   brush_descriptor[0].color = IntColorToD2DColor(kRectangleTopColorRGBA);
@@ -143,18 +169,18 @@ void ZoomLogo::D2DRender(ID2D1RenderTarget* render_target)
   brush_descriptor[1].color = IntColorToD2DColor(kRectangleBottomColorRGBA);
   brush_descriptor[1].position = 1.0;
   CComPtr<ID2D1GradientStopCollection> brush_description;
-  result = render_target_->CreateGradientStopCollection(brush_descriptor, 2, &brush_description);
+  result = render_target->CreateGradientStopCollection(brush_descriptor, 2, &brush_description);
   assert(SUCCEEDED(result));
 
   D2D1_ELLIPSE inner_ellipse = D2D1::Ellipse(D2D1::Point2(client_width / 2, client_height / 2), circle_diameter / 2 - circle_diameter * kCircleBorderWidth, circle_diameter / 2 - circle_diameter * kCircleBorderWidth);
   CComPtr<ID2D1LinearGradientBrush> cirlce_bg_brush;
-  result = render_target_->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties(
+  result = render_target->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties(
     D2D1::Point2F(client_width / 2, client_height / 2 - circle_diameter / 2 + circle_diameter * kCircleBorderWidth)
     ,
     D2D1::Point2F(client_width / 2, client_height / 2 + circle_diameter / 2 - circle_diameter * kCircleBorderWidth)
   ), brush_description, &cirlce_bg_brush);
   assert(SUCCEEDED(result));
-  render_target_->FillEllipse(inner_ellipse, cirlce_bg_brush);
+  render_target->FillEllipse(inner_ellipse, cirlce_bg_brush);
 
   D2D1_RECT_L out_ellipse_bounding_rect;
   out_ellipse_bounding_rect.left = client_width / 2 - circle_diameter / 2;
@@ -263,7 +289,7 @@ void ZoomLogo::D2DRender(ID2D1RenderTarget* render_target)
   zoom_logo_sink->EndFigure(D2D1_FIGURE_END_CLOSED);
   result = zoom_logo_sink->Close();
   assert(SUCCEEDED(result));
-  render_target_->FillGeometry(zoom_logo_path, primary_brush);
+  render_target->FillGeometry(zoom_logo_path, primary_brush);
 
   seconds one_second(1);
   int frame_count =  duration_cast<high_resolution_clock::duration>(one_second) / last_render_time_consume_;
@@ -295,9 +321,9 @@ void ZoomLogo::D2DRender(ID2D1RenderTarget* render_target)
   result = write_factory->CreateTextLayout(buf, wcslen(buf), text_format, client_width, client_height, &text_layout);
   assert(SUCCEEDED(result));
 
-  render_target_->DrawTextLayout(D2D1::Point2(10, 10), text_layout, primary_brush);
+  render_target->DrawTextLayout(D2D1::Point2(10, 10), text_layout, primary_brush);
   
-  result = render_target_->EndDraw();
+  result = render_target->EndDraw();
   assert(SUCCEEDED(result));
 
   last_render_time_consume_ = high_resolution_clock::now() - time_before_render;
