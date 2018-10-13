@@ -84,22 +84,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output\</OutDir>
     <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj\</IntDir>
-    <IncludePath>$(SolutionDir)third_party\boost_1_67_0;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output\</OutDir>
     <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj\</IntDir>
-    <IncludePath>$(SolutionDir)third_party\boost_1_67_0;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output\</OutDir>
     <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj\</IntDir>
-    <IncludePath>$(SolutionDir)third_party\boost_1_67_0;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\output\</OutDir>
     <IntDir>$(SolutionDir)build\$(Platform)\$(Configuration)\obj\</IntDir>
-    <IncludePath>$(SolutionDir)third_party\boost_1_67_0;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

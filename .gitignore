@@ -1,6 +1,5 @@
 # ignore all file under build directory since this directory only contains build targets
 build/
-third_party/
 #------------------------------------------------- -----------------@waring---------------------------------------------------
 # contents below are copied from https://github.com/github/gitignore project
 # c++.gitignore file, do not modify them, and always keep them update to date with https://github.com/github/gitignore project
