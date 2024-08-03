@@ -7,9 +7,14 @@
 #ifndef ZOOM_LOGO_DEFINE_H_
 #define ZOOM_LOGO_DEFINE_H_
 
+#pragma once
+
 #ifdef _DEBUG
 #define ZOOM_LOGO_DEBUG
 #endif
+
+#define STRICT
+#define WIN32_LEAN_AND_MEAN
 
 #define NAMESPACE zoom_logo
 #define NAMESPACE_BEGIN namespace NAMESPACE {
